@@ -28,9 +28,14 @@ def main():
             for symbol in symbols_dictionary:
                 symbol_item = symbols_dictionary.get(symbol)
                 # read SQLite table 'new_coins' and get existing symbol
-                symbol_in_ddbb = select_query(conn, f"SELECT symbol FROM new_coins WHERE symbol = '{symbol}'")
+                symbol_in_ddbb = select_query(conn, f"SELECT symbol, status FROM new_coins WHERE symbol = '{symbol}'")
                 if symbol_in_ddbb is not None and len(symbol_in_ddbb) > 0:
-                    print(f"{symbol} already exists in DDBB")
+                    print(f"{symbol} already exists in DDBB, check status:")
+                    if symbol_in_ddbb[0][1] != symbol_item['status']:
+                        print(f"{symbol} status update: {symbol_item['status']}")
+                        updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+                        query_update = f"UPDATE new_coins SET status='{symbol_item['status']}', updated='{updated}' WHERE symbol='{symbol}'"
+                        execute_query(conn, query_update)
                 else:
                     # insert new symbol
                     created = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
