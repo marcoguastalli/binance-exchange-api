@@ -51,19 +51,25 @@ def init_database(database: str):
     conn = create_connection(database)
     try:
         if conn is not None:
-            # drop tables
-            execute_query(conn, "DROP TABLE IF EXISTS new_coins")
-            conn.commit()
-            # create table
-            sql_create_table = '''CREATE TABLE IF NOT EXISTS new_coins (
-                                         symbol TEXT PRIMARY KEY NOT NULL,
-                                         base_asset TEXT NOT NULL,
-                                         quote_asset TEXT NOT NULL,
-                                         status TEXT NOT NULL,
-                                         created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                         updated TEXT NOT NULL DEFAULT "")'''
-            execute_query(conn, sql_create_table)
-            conn.commit()
+            # check for previously created table
+            table_already_exists = select_query(conn, f"SELECT symbol FROM new_coins")
+            if table_already_exists is not None:
+                print(f"table already exists {table_already_exists}")
+            else:
+                print(f"table does not exist {table_already_exists}")
+                # drop table
+                # execute_query(conn, "DROP TABLE IF EXISTS new_coins")
+                # conn.commit()
+                # create table
+                sql_create_table = '''CREATE TABLE IF NOT EXISTS new_coins (
+                                             symbol TEXT PRIMARY KEY NOT NULL,
+                                             base_asset TEXT NOT NULL,
+                                             quote_asset TEXT NOT NULL,
+                                             status TEXT NOT NULL,
+                                             created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                             updated TEXT NOT NULL DEFAULT "")'''
+                execute_query(conn, sql_create_table)
+                conn.commit()
         else:
             print("Error Connection to DDBB:" + database)
     finally:
