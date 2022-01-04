@@ -30,7 +30,7 @@ class GetExchangeInformation:
 
         json_response = api_response.json()
         symbols = json_response['symbols']
-        print(f"Found {len(symbols)} symbols in the Exchange")
+        # print(f"Found {len(symbols)} symbols in the Exchange")
         for symbol_item in symbols:
             result[symbol_item['symbol']] = symbol_item
         print(f"Return {len(symbols)} symbols from the API")

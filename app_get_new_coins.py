@@ -1,6 +1,10 @@
+import asyncio
 import os
 import sys
 from datetime import datetime
+
+import aioschedule as schedule
+import time
 
 from db_client.create_connection import create_connection
 from db_client.execute_query import execute_query
@@ -10,10 +14,10 @@ from db_client.select_query import select_query
 DATABASE = "/Users/marcoguastalli/opt/sqlite/coins.sqlite"
 REST_API_ENDPOINT_SANDBOX = "https://testnet.binance.vision"
 REST_API_ENDPOINT_PRODUCTION = "https://api.binance.com"
-REST_API_ENDPOINT = REST_API_ENDPOINT_SANDBOX
+REST_API_ENDPOINT = REST_API_ENDPOINT_PRODUCTION
 
 
-def main():
+async def main():
     init_database(DATABASE)
     conn = create_connection(DATABASE)
     try:
@@ -30,7 +34,7 @@ def main():
                 # read SQLite table 'new_coins' and get existing symbol
                 symbol_in_ddbb = select_query(conn, f"SELECT symbol, status FROM new_coins WHERE symbol = '{symbol}'")
                 if symbol_in_ddbb is not None and len(symbol_in_ddbb) > 0:
-                    print(f"{symbol} already exists in DDBB, check status:")
+                    # print(f"{symbol} already exists in DDBB, check status:")
                     if symbol_in_ddbb[0][1] != symbol_item['status']:
                         print(f"{symbol} status update: {symbol_item['status']}")
                         updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -42,11 +46,11 @@ def main():
                     query_insert = f"INSERT INTO new_coins (symbol, base_asset, quote_asset, status, created) " \
                                    f"VALUES ('{symbol}', '{symbol_item['baseAsset']}', '{symbol_item['quoteAsset']}', '{symbol_item['status']}', '{created}')"
                     execute_query(conn, query_insert)
-                    print(f"NEW symbol: {symbol}  -->  {symbol_item['baseAsset']}_{symbol_item['quoteAsset']}  -->  status: {symbol_item['status']}")
+                    print(f"New symbol found: {symbol}  -->  {symbol_item['baseAsset']}_{symbol_item['quoteAsset']}  -->  status: {symbol_item['status']}")
             # commit
             conn.commit()
         else:
-            print("Error Connection to DDBB:" + database)
+            print(f"Error Connection to DDBB: {DATABASE}")
     finally:
         if conn is not None:
             conn.close()
@@ -58,10 +62,8 @@ def init_database(database: str):
         if conn is not None:
             # check for previously created table
             table_already_exists = select_query(conn, f"SELECT symbol FROM new_coins")
-            if table_already_exists is not None:
-                print(f"table already exists {table_already_exists}")
-            else:
-                print(f"table does not exist {table_already_exists}")
+            if table_already_exists is None:
+                print(f"Create table 'new_coins'")
                 # drop table
                 # execute_query(conn, "DROP TABLE IF EXISTS new_coins")
                 # conn.commit()
@@ -84,9 +86,13 @@ def init_database(database: str):
 
 if __name__ == '__main__':
     try:
-        main()
+        schedule.every(5).seconds.do(main)
+        loop = asyncio.get_event_loop()
+        while True:
+            loop.run_until_complete(schedule.run_pending())
+            time.sleep(1)
     except KeyboardInterrupt:
-        print('Interrupted')
+        print('Process Interrupted!')
         try:
             sys.exit(0)
         except SystemExit:
